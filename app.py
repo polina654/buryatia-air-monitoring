@@ -8,7 +8,7 @@ st.set_page_config(page_title='Мониторинг выбросов | Буря�
                    page_icon='🌿',layout='wide')
 COLORS = ['#2dd4bf','#f59e0b','#60a5fa','#a78bfa','#fb7185','#94a3b8','#34d399']
 REGIONS = ['Республика Бурятия','Забайкальский край']
-OUT = Path(__file__).resolve().parent/'vkr_output'
+OUT = Path(__file__).resolve().parent
 
 st.markdown('''<style>
 .block-container {padding-top:1.6rem;max-width:1300px}
