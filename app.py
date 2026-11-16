@@ -8,7 +8,7 @@ st.set_page_config(page_title='Мониторинг выбросов | Буря�
                    page_icon='🌿',layout='wide')
 COLORS = ['#2dd4bf','#f59e0b','#60a5fa','#a78bfa','#fb7185','#94a3b8','#34d399']
 REGIONS = ['Республика Бурятия','Забайкальский край']
-OUT = Path(__file__).resolve().parent
+OUT = Path(__file__).resolve().parent/'vkr_output'
 
 st.markdown('''<style>
 .block-container {padding-top:1.6rem;max-width:1300px}
@@ -152,6 +152,16 @@ with tab4:
                     title='Структура по группам веществ, тыс. т',color_discrete_sequence=COLORS,
                     labels={'region':'Регион','emission_kt':'тыс. т','substance':'Вещество'})),
                     use_container_width=True)
+    # Сравнение доли каждой группы веществ в общем объёме стационарных выбросов.
+    shares = pp.merge(y0[['region', 'stationary_kt']], on='region', validate='many_to_one')
+    shares['share_pct'] = shares['emission_t'] / (shares['stationary_kt'] * 1000) * 100
+    st.plotly_chart(fig_style(px.bar(
+        shares, x='share_pct', y='substance', color='region',
+        barmode='group', orientation='h',
+        title=f'Сравнительная структура выбросов, {year} г., %',
+        color_discrete_map=dict(zip(REGIONS, COLORS)),
+        labels={'share_pct':'Доля, %','substance':'Вещество','region':'Регион'}
+    )).update_layout(height=500, hovermode='closest'), use_container_width=True)
     selected_substance=st.selectbox('Загрязняющее вещество',sorted(p.substance.unique()))
     trend=p[(p.substance==selected_substance)&p.region.isin(region_list)&p.year.between(*period)]
     st.plotly_chart(fig_style(px.line(trend,x='year',y='emission_t',color='region',markers=True,
@@ -162,6 +172,27 @@ with tab4:
     view=c[['region','received_t','caught_t','utilized_t','capture_pct','utilization_pct']].copy()
     st.dataframe(view.round(2),hide_index=True,use_container_width=True)
     st.caption('Доля уловленных = уловлено / поступило на очистку. Доля утилизированных = утилизировано / уловлено. Это НЕ доля очистки всех образовавшихся выбросов.')
+
+    # Динамика коэффициентов очистки с учётом фильтров региона и периода.
+    cleaning_trend = d['cleaning'][
+        d['cleaning'].region.isin(region_list) & d['cleaning'].year.between(*period)
+    ].sort_values('year')
+    st.markdown('**Динамика показателей очистки**')
+    a, b = st.columns(2)
+    with a:
+        st.plotly_chart(fig_style(px.line(
+            cleaning_trend, x='year', y='capture_pct', color='region', markers=True,
+            title='Коэффициент улавливания, %',
+            color_discrete_map=dict(zip(REGIONS, COLORS)),
+            labels={'year':'Год','capture_pct':'Улавливание, %','region':'Регион'}
+        )).update_xaxes(dtick=1), use_container_width=True)
+    with b:
+        st.plotly_chart(fig_style(px.line(
+            cleaning_trend, x='year', y='utilization_pct', color='region', markers=True,
+            title='Коэффициент утилизации, %',
+            color_discrete_map=dict(zip(REGIONS, COLORS)),
+            labels={'year':'Год','utilization_pct':'Утилизация, %','region':'Регион'}
+        )).update_xaxes(dtick=1), use_container_width=True)
 
 st.divider()
 st.caption('Источник: официальные файлы Росприроднадзора из архива ВКР. Статистика выбросов не равнозначна концентрациям загрязняющих веществ в воздухе.')
